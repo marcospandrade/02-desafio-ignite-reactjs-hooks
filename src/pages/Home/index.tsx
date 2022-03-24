@@ -1,70 +1,82 @@
-import React, { useState, useEffect } from "react";
-import { MdAddShoppingCart } from "react-icons/md";
+import React, { useState, useEffect } from 'react';
+import { MdAddShoppingCart } from 'react-icons/md';
 
-import { ProductList } from "./styles";
-import { api } from "../../services/api";
-import { formatPrice } from "../../util/format";
-import { useCart } from "../../hooks/useCart";
+import { ProductList } from './styles';
+import { api } from '../../services/api';
+import { formatPrice } from '../../util/format';
+import { useCart } from '../../hooks/useCart';
+import { toast } from 'react-toastify';
 
 interface Product {
-  id: number;
-  title: string;
-  price: number;
-  image: string;
+    id: number;
+    title: string;
+    price: number;
+    image: string;
 }
 
 interface ProductFormatted extends Product {
-  priceFormatted: string;
+    priceFormatted: string;
 }
 
 interface CartItemsAmount {
-  [key: number]: number;
+    [key: number]: number;
 }
 
 function Home() {
-  // const [products, setProducts] = useState<ProductFormatted[]>([]);
-  const { addProduct, cart } = useCart();
+    const [products, setProducts] = useState<ProductFormatted[]>([]);
+    const { addProduct, cart } = useCart();
 
-  // const cartItemsAmount = cart.reduce((sumAmount, product) => {
-  //   // TODO
-  // }, {} as CartItemsAmount)
+    const cartItemsAmount = cart.reduce((sumAmount, product) => {
+        sumAmount[product.id] = product.amount;
+        return sumAmount;
+    }, {} as CartItemsAmount);
 
-  useEffect(() => {
-    async function loadProducts() {
-      // TODO
+    useEffect(() => {
+        async function loadProducts() {
+            api.get('/products')
+                .then(response => {
+                    setProducts(
+                        response.data.map((product: Product) => ({
+                            ...product,
+                            priceFormatted: formatPrice(product.price)
+                        }))
+                    );
+                })
+                .catch(err => {
+                    toast.error('Não foi possível carregar os produtos');
+                });
+        }
+
+        loadProducts();
+    }, []);
+
+    function handleAddProduct(id: number) {
+        addProduct(id);
     }
 
-    loadProducts();
-  }, []);
+    return (
+        <ProductList>
+            {products.map((product, index) => (
+                <li key={index}>
+                    <img src={product.image} alt={product.title} />
+                    <strong>{product.title}</strong>
+                    <span>{product.priceFormatted}</span>
+                    <button
+                        type="button"
+                        data-testid="add-product-button"
+                        onClick={() => handleAddProduct(product.id)}
+                    >
+                        <div data-testid="cart-product-quantity">
+                            <MdAddShoppingCart size={16} color="#FFF" />
+                            {cartItemsAmount[product.id] || 0}
+                        </div>
 
-  function handleAddProduct(id: number) {
-    addProduct(id);
-  }
-
-  return (
-    <ProductList>
-      <li>
-        <img
-          src="https://rocketseat-cdn.s3-sa-east-1.amazonaws.com/modulo-redux/tenis1.jpg"
-          alt="Tênis de Caminhada Leve Confortável"
-        />
-        <strong>Tênis de Caminhada Leve Confortável</strong>
-        <span>R$ 179,90</span>
-        <button
-          type="button"
-          data-testid="add-product-button"
-          onClick={() => handleAddProduct(1)}
-        >
-          <div data-testid="cart-product-quantity">
-            <MdAddShoppingCart size={16} color="#FFF" />
-            {/* {cartItemsAmount[product.id] || 0} */} 2
-          </div>
-
-          <span>ADICIONAR AO CARRINHO</span>
-        </button>
-      </li>
-    </ProductList>
-  );
+                        <span>ADICIONAR AO CARRINHO</span>
+                    </button>
+                </li>
+            ))}
+        </ProductList>
+    );
 }
 
 export default Home;
